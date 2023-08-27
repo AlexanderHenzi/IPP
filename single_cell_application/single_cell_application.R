@@ -35,8 +35,8 @@ colpal <- c(
 )
 
 # functions
-source("ipp.R")
-source("distributional_anchor_regression.R")
+source("functions/ipp.R")
+source("functions/distributional_anchor_regression.R")
 
 # seed
 set.seed(20230531)
@@ -316,7 +316,7 @@ stability <- ggplot() +
     aes(x = env, ymin = lwr, ymax = upr)
   ) +
   facet_grid(cols = vars(lambda), rows = vars(score)) +
-  labs(x = "Environments", y = "LogS") +
+  labs(x = "Environments", y = "Risk") +
   theme(
     axis.ticks.x = element_blank(),
     axis.text.x = element_blank()
