@@ -1,15 +1,25 @@
+'''
+Refer to https://github.com/xwshen51/DRIG/blob/main/estimate.py
+'''
+
 import numpy as np
 from scipy.linalg import sqrtm, norm
 import pandas as pd
 
 
 def est_drig(data, gamma, y_idx=-1, del_idx=None, unif_weight=False):
-    '''
-    DRIG estimator
-    Arguments:
-        data: a list of numpy arrays, where the first element is the observational environment
-        weight: whether we use the sample size as the weights
-    '''
+    """DRIG estimator.
+
+    Args:
+        data (list of numpy arrays): a list of data from all environments, where the first element is the observational environment.
+        gamma (float): hyperparameter in DRIG.
+        y_idx (int, optional): index of the response variable. Defaults to -1.
+        del_idx (int, optional): index of the variable to exclude. Defaults to None.
+        unif_weight (bool, optional): whether to use uniform weights. Defaults to False.
+
+    Returns:
+        numpy array: estimated coefficients.
+    """
     if del_idx is None:
         del_idx = y_idx
     ## number of environment
@@ -36,6 +46,15 @@ def est_drig(data, gamma, y_idx=-1, del_idx=None, unif_weight=False):
     return np.linalg.inv(G).dot(Z)
 
 def pop_drig(grams, gamma):
+    """DRIG estimator at the population level.
+
+    Args:
+        grams (list of numpy arrays): a list of gram matrices.
+        gamma (float): hyperparameter.
+
+    Returns:
+        numpy array: estimated coefficients.
+    """
     m = len(grams)
     gram_x = []
     gram_xy = []
@@ -48,6 +67,12 @@ def pop_drig(grams, gamma):
     return np.linalg.inv(G).dot(Z)
 
 def est_drig_adap(data, data_test, y_idx=-1, del_idx=None, unif_weight=False):
+    """DRIG-A estimator.
+
+    Args:
+        data (list of numpy arrays): a list of data from all environments.
+        data_test (numpy array): test data.
+    """
     if del_idx is None:
         del_idx = y_idx
     ## training stats
@@ -82,7 +107,7 @@ def est_drig_adap(data, data_test, y_idx=-1, del_idx=None, unif_weight=False):
     ## calculate adaptive gamma
     mat_mid = sqrtm(delta_x_sqrt @ (gram_x_te - gram_x[0]) @ delta_x_sqrt)
     if not np.isrealobj(mat_mid):
-        # print('complex number appears')
+        # print("complex number appears")
         mat_mid = np.real(mat_mid)
     gamma_x = delta_x_sqrt_inv @ mat_mid @ delta_x_sqrt_inv
     gamma_y = (sigma_x_te_sqrt @ gamma_x @ delta_xy).T @ sigma_x_te_sqrt @ (gram_xy_te - gram_xy[0]) / norm(sigma_x_te_sqrt @ gamma_x @ delta_xy, 2)**2
@@ -91,42 +116,9 @@ def est_drig_adap(data, data_test, y_idx=-1, del_idx=None, unif_weight=False):
     Z = gram_xy[0] + gamma_y * gamma_x @ delta_xy
     return np.linalg.inv(G).dot(Z)
 
-# def est_drig_adap(data, data_test, y_idx=-1, del_idx=-1):
-#     ## training stats
-#     m = len(data)
-#     gram_x = [] ## E[XX^T]
-#     gram_xy = [] ## E[XY]
-#     for e in range(m):
-#         data_e = data[e]
-#         n = data_e.shape[0]
-#         y = data_e[:, y_idx]
-#         x = np.delete(data_e, (y_idx, del_idx), 1)
-#         gram_x.append(x.T.dot(x)/n)
-#         gram_xy.append(x.T.dot(y)/n)
-#     delta_x = sum(gram_x - gram_x[0])/m
-#     delta_xy = sum(gram_xy - gram_xy[0])/m
-#     delta_x_sqrt = sqrtm(delta_x)
-#     delta_x_sqrt_inv = np.linalg.inv(delta_x_sqrt)
-#     ## test stats
-#     n = data_test.shape[0]
-#     y_te = data_test[:, y_idx]
-#     x_te = np.delete(data_test, (y_idx, del_idx), 1)
-#     gram_x_te = x_te.T.dot(x_te)/n
-#     gram_xy_te = x_te.T.dot(y_te)/n
-#     sigma_x_te_sqrt = np.linalg.inv(sqrtm(gram_x_te))
-#     ## calculate adaptive gamma
-#     mat_mid = sqrtm(delta_x_sqrt @ (gram_x_te - gram_x[0]) @ delta_x_sqrt)
-#     if not np.isrealobj(mat_mid):
-#         print('complex number appears')
-#         mat_mid = np.real(mat_mid)
-#     gamma_x = delta_x_sqrt_inv @ mat_mid @ delta_x_sqrt_inv
-#     gamma_y = (sigma_x_te_sqrt @ gamma_x @ delta_xy).T @ sigma_x_te_sqrt @ (gram_xy_te - gram_xy[0]) / norm(sigma_x_te_sqrt @ gamma_x @ delta_xy, 2)**2
-#     ## estimator 
-#     G = gram_x[0] + gamma_x @ delta_x @ gamma_x
-#     Z = gram_xy[0] + gamma_y * gamma_x @ delta_xy
-#     return np.linalg.inv(G).dot(Z)
-
 def est_anchor(data, gamma, y_idx=-1, del_idx=None, unif_weight=False):
+    """Anchor regression estimator.
+    """
     if del_idx is None:
         del_idx = y_idx
     m = len(data)
@@ -155,6 +147,8 @@ def est_anchor(data, gamma, y_idx=-1, del_idx=None, unif_weight=False):
     return np.linalg.inv(G).dot(Z)
 
 def pop_anchor(grams, mus, gamma):
+    """Anchor regression at population.
+    """
     m = len(grams)
     gram_x = [] ## E[x^T]
     mu_x = [] ## E[X]E[X^T]
@@ -172,34 +166,43 @@ def pop_anchor(grams, mus, gamma):
     return np.linalg.inv(G).dot(Z)
         
 
-def est(data, method='drig', gamma=None, y_idx=-1, del_idx=None, unif_weight=False):
+def est(data, method="drig", gamma=None, y_idx=-1, del_idx=None, unif_weight=False):
+    """General estimation function. 
+
+    Args:
+        data (list of numpy arrays): a list of data from all environments, where the first element is the observational environment.
+        method (str, optional): estimation method. Defaults to "drig".
+        gamma (float): hyperparameter in DRIG.
+        y_idx (int, optional): index of the response variable. Defaults to -1.
+        del_idx (int, optional): index of the variable to exclude. Defaults to None.
+        unif_weight (bool, optional): whether to use uniform weights. Defaults to False.
+
+    Returns:
+        numpy array: estimated coefficients.
+    """
     if del_idx is None:
         del_idx = y_idx
-    if method == 'ols_pool':
+    if method == "ols_pool":
         ## pooled OLS
-        # data = np.concatenate(data)
-        # x = data[:, :-1]
-        # y = data[:, -1]
-        # b = np.linalg.inv(x.T.dot(x)).dot(x.T.dot(y))
         b = est_drig(data, 1, y_idx, del_idx, unif_weight)
-    elif method == 'ols_obs':
+    elif method == "ols_obs":
         ## observational OLS
         data = data[0]
         y = data[:, y_idx]
         x = np.delete(data, (y_idx, del_idx), 1)
         b = np.linalg.inv(x.T.dot(x)).dot(x.T.dot(y))
-    elif method == 'drig':
+    elif method == "drig":
         b = est_drig(data, gamma, y_idx, del_idx, unif_weight)
-    elif method == 'anchor':
+    elif method == "anchor":
         b = est_anchor(data, gamma, y_idx, del_idx, unif_weight)
     return b
 
 def test_mse(data, b, y_idx=-1, del_idx=None):
-    '''
-    Test on a single dataset
+    """Test MSE on a single dataset.
+    
     Arguments:
-        data: a numpy array
-    '''
+        data (numpy array): test data
+    """
     if del_idx is None:
         del_idx = y_idx
     x = np.delete(data, (y_idx, del_idx), 1)
@@ -208,12 +211,12 @@ def test_mse(data, b, y_idx=-1, del_idx=None):
     return ((y - y_pred)**2).mean()
 
 def test_mse_list(data, b, pooled=False, stats_only=False, y_idx=-1, del_idx=None):
-    '''
-    Test on multiple datasets
+    """Test on multiple datasets.
+    
     Arguments:
-        data: list of numpy arrays
-        pooled: MSE on pooled data
-    '''
+        data (list of numpy arrays): a list of test data.
+        pooled (bool, optional): whether to compute the MSE on pooled data. Default to False.
+    """
     if del_idx is None:
         del_idx = y_idx
     errors = []
@@ -227,11 +230,11 @@ def test_mse_list(data, b, pooled=False, stats_only=False, y_idx=-1, del_idx=Non
         return errors
 
 def test_mse_pop(gram, b):
-    '''
-    Population test MSE on a single test
+    """Population test MSE on a single test.
+    
     Arguments:
-        gram: gram matrix of test data
-    '''
+        gram (numpy array): gram matrix of test data
+    """
     return gram[-1, -1] + b.T @ gram[:-1, :-1] @ b - 2 * b.T @ gram[:-1, -1]
 
 def test_mse_list_pop(grams, b):
@@ -243,40 +246,20 @@ def test_mse_list_pop(grams, b):
 def eval_test(b, method, results, perturb_stren, test_grams, train_id):
     num_test_envs = len(test_grams)
     return pd.concat([results, pd.DataFrame({
-        'train_id': np.repeat(train_id, num_test_envs),
-        'method': np.repeat(method, num_test_envs),
-        'perturb_stren': np.repeat(perturb_stren, num_test_envs),
-        'test_mse': np.array(test_mse_list_pop(test_grams, b)),
+        "train_id": np.repeat(train_id, num_test_envs),
+        "method": np.repeat(method, num_test_envs),
+        "perturb_stren": np.repeat(perturb_stren, num_test_envs),
+        "test_mse": np.array(test_mse_list_pop(test_grams, b)),
     })], ignore_index=True)
     
-# def est_oracle_gamma(data_train, method, gram_test, gamma_l=0, gamma_u=1000, gamma_tol=1):
-#     '''
-#     bisection to find the best gamma based on test performance
-#     Arguments:
-#         data_train: list of finite sample training data
-#         method: 'drig' or 'anchor'
-#         gram_test: gram matrix of test data
-#     '''
-#     error_l = test_mse_pop(gram_test, est(data_train, method, gamma_l))
-#     error_u = test_mse_pop(gram_test, est(data_train, method, gamma_u))
-#     while (gamma_u - gamma_l > gamma_tol):
-#         gamma_m = (gamma_l + gamma_u)/2
-#         if error_l < error_u:
-#             gamma_u = gamma_m
-#             error_u = test_mse_pop(gram_test, est(data_train, method, gamma_u))
-#         else:
-#             gamma_l = gamma_m
-#             error_l = test_mse_pop(gram_test, est(data_train, method, gamma_l))
-#     return gamma_m, test_mse_pop(gram_test, est(data_train, method, gamma_m))
-
 def est_oracle_gamma(data_train, method, gram_test, gamma_l=0, gamma_u=1000, gamma_step=1):
-    '''
-    Find the best gamma based on test performance
+    """Find the best gamma based on test performance
+    
     Arguments:
-        data_train: list of finite sample training data
-        method: 'drig' or 'anchor'
-        gram_test: gram matrix of test data
-    '''
+        data_train (list of numpy arrays): list of finite sample training data
+        method (str): "drig" or "anchor"
+        gram_test (numpy array): gram matrix of test data
+    """
     
     gamma = gamma_l
     while gamma < gamma_u:
@@ -288,11 +271,9 @@ def est_oracle_gamma(data_train, method, gram_test, gamma_l=0, gamma_u=1000, gam
             return gamma_p, error_p
     return gamma, error
 
-
 def est_oracle_gamma_list(data_train, method, grams_test, gamma_l=0, gamma_u=1000, gamma_step=1):
-    '''
-    est_oracle_gamma for a list of test gram matrices
-    '''
+    """Apply `est_oracle_gamma` to a list of test gram matrices
+    """
     gammas = []; errors = []
     for gram_test in grams_test:
         gamma, error = est_oracle_gamma(data_train, method, gram_test, gamma_l, gamma_u, gamma_step)
@@ -302,12 +283,11 @@ def est_oracle_gamma_list(data_train, method, grams_test, gamma_l=0, gamma_u=100
 def eval_test_oracle_gamma(data_train, method, results, perturb_stren, test_grams, gamma_l=0, gamma_u=1000, gamma_step=1, train_id=0):
     gammas, errors = est_oracle_gamma_list(data_train, method, test_grams, gamma_l, gamma_u, gamma_step)
     num_test_envs = len(test_grams)
-    method_name = 'DRIG oracle' if method == 'drig' else 'anchor regression oracle'
+    method_name = "DRIG oracle" if method == "drig" else "anchor regression oracle"
     return pd.concat([results, pd.DataFrame({
-        'train_id': np.repeat(train_id, num_test_envs),
-        'method': np.repeat(method_name, num_test_envs),
-        'perturb_stren': np.repeat(perturb_stren, num_test_envs),
-        'test_mse': np.array(errors),
-        'gamma': np.array(gammas)
+        "train_id": np.repeat(train_id, num_test_envs),
+        "method": np.repeat(method_name, num_test_envs),
+        "perturb_stren": np.repeat(perturb_stren, num_test_envs),
+        "test_mse": np.array(errors),
+        "gamma": np.array(gammas)
     })], ignore_index=True)
-    

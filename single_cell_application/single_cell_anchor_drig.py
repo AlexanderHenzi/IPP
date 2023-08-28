@@ -1,34 +1,33 @@
+'''
+Refer to https://github.com/xwshen51/DRIG/blob/main/single_cell.ipynb
+'''
+
+
 # packages
 import pandas as pd
 import os 
-from estimate import *
+from functions.anchor_drig import *
 import pandas as pd
 
-# function for splitting data
-def data_split(data_dir="dataset_rpe1_99.csv",
-               center_obs=True):
-    df = pd.read_csv(data_dir)
-    interv_label = df['interventions']
-    groups = df.groupby(['interventions'])
-    if center_obs:
-        df.iloc[:,:-1] = df.iloc[:,:-1] - groups.get_group('non-targeting').iloc[:,:-1].mean()
-    ## observational data
-    data_obs = groups.get_group('non-targeting').iloc[:,:-1].to_numpy()
-    ## interventional data
-    interv_obs = df.columns[:-1].to_numpy()
-    interv_hidden = set(interv_label) - set(interv_obs) - set(['non-targeting'])
-    data_interv_obs = []
-    data_interv_hidden = []
-    for interv_i in interv_obs:
-        data_interv_obs.append(groups.get_group(interv_i).iloc[:,:-1].to_numpy())
-    for interv_i in interv_hidden:
-        data_interv_hidden.append(groups.get_group(interv_i).iloc[:,:-1].to_numpy())
-    data_interv_obs = dict(zip(interv_obs, data_interv_obs))
-    data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
-    return data_obs, data_interv_obs, data_interv_hidden
-
-# format data
-data_obs, data_interv_obs, data_interv_hidden = data_split(center_obs=True)
+# load data
+df = pd.read_csv("data/dataset_rpe1.csv")
+interv_label = df['interventions']
+groups = df.groupby(['interventions'])
+## centralize data
+df.iloc[:,:-1] = df.iloc[:,:-1] - groups.get_group('non-targeting').iloc[:,:-1].mean()
+## observational data
+data_obs = groups.get_group('non-targeting').iloc[:,:-1].to_numpy()
+## interventional data
+interv_obs = df.columns[:-1].to_numpy()
+interv_hidden = set(interv_label) - set(interv_obs) - set(['non-targeting'])
+data_interv_obs = []
+data_interv_hidden = []
+for interv_i in interv_obs:
+    data_interv_obs.append(groups.get_group(interv_i).iloc[:,:-1].to_numpy())
+for interv_i in interv_hidden:
+    data_interv_hidden.append(groups.get_group(interv_i).iloc[:,:-1].to_numpy())
+data_interv_obs = dict(zip(interv_obs, data_interv_obs))
+data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
 train_data = [data_obs] + list(data_interv_obs.values())
 
 # get all test environments
@@ -56,5 +55,5 @@ for i in range(num_gammas):
     results = result if results is None else pd.concat([results, result], ignore_index=True)
     
 # export results
-results.to_csv('temporary_files/anchor_drig.csv')
+results.to_csv('results/anchor_drig.csv')
 
