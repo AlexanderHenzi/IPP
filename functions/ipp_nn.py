@@ -69,7 +69,7 @@ def loss_scrps1(data, model, y_idx=-1):
     loss = (1 + score_p_phat / score_phat + torch.log(2 * score_phat)) / 2
     return loss
 
-def loss_rex(data, model, lam=1, y_idx=-1):
+def loss_vrex(data, model, lam=1, y_idx=-1):
     losses = []
     for data_e in data:
         x, y = get_x_y(data_e, y_idx)
