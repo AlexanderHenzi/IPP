@@ -1,6 +1,6 @@
-'''
+"""
 Refer to https://github.com/xwshen51/DRIG/blob/main/estimate.py
-'''
+"""
 
 import numpy as np
 from scipy.linalg import sqrtm, norm

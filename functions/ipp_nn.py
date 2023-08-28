@@ -84,12 +84,12 @@ def loss_rex(data, model, lam=1, y_idx=-1):
 """ For test """
 
 def test_mse(data, model, target="mean", generative=False, y_idx=-1):
-    '''
+    """
     Test on a single dataset
     Arguments:
         data: a numpy array
         model: a model or a list of models
-    '''
+    """
     x, y = get_x_y(data, y_idx)
     
     with torch.no_grad():
@@ -138,12 +138,12 @@ def test_mse(data, model, target="mean", generative=False, y_idx=-1):
     return loss
 
 def test_mse_list(data, model, target="mean", pooled=False, stats_only=False, generative=False, y_idx=-1):
-    '''
+    """
     Test on multiple datasets
     Arguments:
         data: list of numpy arrays
         pooled: MSE on pooled data
-    '''
+    """
     errors = []
     for i in range(len(data)):
         errors.append(test_mse(data[i], model, target, generative, y_idx))
