@@ -35,7 +35,7 @@ data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
 train_data = [data_obs] + list(data_interv_obs.values())[:-1]
 
 ## test data
-data_test_large_shift_gene = list(pd.read_csv("envs_vs_pooled.csv")['genes'])
+data_test_large_shift_gene = list(pd.read_csv("single_cell_test_envs.csv")['genes'])
 data_test = []
 for i in range(len(data_interv_hidden)):
     if list(data_interv_hidden.keys())[i] in data_test_large_shift_gene:

@@ -31,21 +31,23 @@ data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
 train_data = [data_obs] + list(data_interv_obs.values())
 
 # get all test environments
-test_mse_ols_obs = np.array(test_mse_list(list(data_interv_hidden.values()), est(train_data, method="ols_obs")))
-env_idx = test_mse_ols_obs.argsort()[::-1][:412]
-data_test_large_shift = [list(data_interv_hidden.values())[i] for i in env_idx]
-data_test_large_shift_gene = [list(data_interv_hidden.keys())[i] for i in env_idx]
+data_test_large_shift_gene = list(pd.read_csv("single_cell_test_envs.csv")['genes'])
+data_test = []
+for i in range(len(data_interv_hidden)):
+    if list(data_interv_hidden.keys())[i] in data_test_large_shift_gene:
+        data_test.append(list(data_interv_hidden.values())[i])
+
 
 # estimate anchor regressoin and drig, compute error
-gammas = np.arange(0, 50, 1)
+gammas = np.arange(0, 101, 1)
 num_gammas = len(gammas)
-num_envs = len(data_test_large_shift)
+num_envs = len(data_test)
 results = pd.DataFrame(columns=["method", "gamma", "interv_gene", "test_mse"])
 mses_drig = []
 mses_anc = []
 for i in range(num_gammas):
-    mses_drig = test_mse_list(data_test_large_shift, est(train_data, method="drig", gamma=gammas[i]))
-    mses_anc = test_mse_list(data_test_large_shift, est(train_data, method="anchor", gamma=gammas[i]))
+    mses_drig = test_mse_list(data_test, est(train_data, method="drig", gamma=gammas[i]))
+    mses_anc = test_mse_list(data_test, est(train_data, method="anchor", gamma=gammas[i]))
     result = pd.DataFrame({
         "method": np.concatenate([np.repeat("DRIG", num_envs), np.repeat("anchor regression", num_envs)], axis=0),
         "gamma": np.repeat(gammas[i], num_envs*2),
