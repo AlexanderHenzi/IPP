@@ -44,7 +44,7 @@ set.seed(20230531)
 # --- data and preprocessing ---------------------------------------------------
 
 # data and preprocessing
-data <- read.table("dataset_rpe1_99.csv", header = TRUE, sep = ",")
+data <- read.table("data/dataset_rpe1_99.csv", header = TRUE, sep = ",")
 vnames <- c("non-targeting", colnames(data)[grepl("ENSG", colnames(data))])
 data$hidden <- !(data$interventions %in% vnames)
 rvar <- "ENSG00000173812"
@@ -92,7 +92,7 @@ Y_tr <- data %>%
   getElement(name = "data") %>%
   map(.f = ~getElement(., rvar))
 
-# energy distance to select environments for prediction
+# energy distance to select environments for prediction, compare to OLS
 all_envs <- unique(data$interventions[data$hidden])
 all_envs <- all_envs[all_envs != "excluded"]
 obs_data <- data %>%
@@ -110,22 +110,41 @@ obs_data <- do.call(
 )
 obs_data <- data.matrix(obs_data)
 nobs <- nrow(obs_data)
-
 m <- length(all_envs)
-edists <- numeric(m)
+
+## for OLS prediction 
+observational_means <- c(
+  colMeans(X_tr[[which(envs_interv == "non-targeting")]]),
+  mean(Y_tr[[which(envs_interv == "non-targeting")]])
+)
+obs_data_ols <- t(t(obs_data) - observational_means)
+obs_x_ols <- obs_data_ols[, -ncol(obs_data_ols)]
+obs_y_ols <- obs_data_ols[, ncol(obs_data_ols)]
+clm <- coef(lm(obs_y_ols ~ obs_x_ols - 1))
+
+## compute energy distance and errors
+edists <- ols_mse <- numeric(m)
 pb <- txtProgressBar(max = m)
 for (j in seq_len(m)) {
   intv_data <- data %>%
     filter(interventions == all_envs[j]) %>%
     select(-hidden, -interventions) %>%
     data.matrix()
+  ols_mse[j] <- mean(
+    (intv_data[, ncol(intv_data)] - intv_data[, -ncol(intv_data)] %*% clm)^2
+  )
   edists[j] <- eqdist.e(rbind(obs_data, intv_data), sizes = c(nobs, nrow(intv_data)))
   setTxtProgressBar(pb, j)
 }
 close(pb)
 nenv <- 50
 envs <- all_envs[order(edists, decreasing = TRUE)][seq_len(nenv)]
+envs_ols <- all_envs[order(ols_mse, decreasing = TRUE)][seq_len(nenv)]
 
+intersect(envs, envs_ols)
+length(intersect(envs, envs_ols))
+
+## format validation data
 X_vl <- data %>%
   filter(hidden & interventions %in% envs)
 envs_long <- X_vl$interventions
@@ -153,7 +172,7 @@ scrps_gaussian <- function(y, l, s) {
 }
 
 ### fit the model with logarithmic score and scrps
-lambda <- c(0:5, seq(10, 50, 5))
+lambda <- c(0:5, seq(10, 100, 5))
 nlambda <- length(lambda)
 
 npar <- 2 * ncol(X_tr[[1]]) + 2
@@ -196,6 +215,8 @@ fit_scrps <- ipp(
   seed = 20230531
 )
 
+save(list = ls(), file = "single_cell.rda")
+
 ### find out which lambda would be a good choice
 pvals_logs <- pvals_scrps <- numeric(nlambda)
 for (j in seq_len(nlambda)) {
@@ -234,16 +255,6 @@ plt_pval <- ggplot() +
   scale_color_manual(values = colpal[1:2]) +
   labs(x = "Penalty", y = "P-value", color = element_blank()) +
   theme(legend.position = "bottom")
-plt_pval <- ggarrange(
-  ggplot() + theme_void(),
-  plt_pval,
-  ggplot() + theme_void(),
-  nrow = 1
-)
-
-pdf("temporary_files/single_cell_pval.pdf", width = 8, height = 2.5)
-print(plt_pval)
-dev.off()
 
 ### plot parameters as function of lambda
 ipp_locs <- data.frame(
@@ -286,7 +297,7 @@ ipp_scrps_errs <- imap(
   .f = ~data.frame(env = .y, logs = c(t(.x)), lambda = lambda, score = "SCRPS")
 )
 ipp_errs <- do.call(rbind, c(ipp_logs_errs, ipp_scrps_errs)) %>%
-  filter(lambda %in% c(0, 5, 10, 20, 40))
+  filter(lambda %in% c(0, 5, 10, 40, 80))
 
 stability <- ggplot() +
   geom_errorbar(
@@ -322,8 +333,15 @@ stability <- ggplot() +
     axis.text.x = element_blank()
   )
 
-pdf("temporary_files/stability.pdf", width = 8, height = 2.5)
-print(stability)
+stability_pvals <- ggarrange(
+  stability,
+  plt_pval,
+  nrow = 1,
+  widths = c(2, 1)
+)
+
+pdf("temporary_files/stability_pvals.pdf", width = 8, height = 3)
+print(stability_pvals)
 dev.off()
 
 ### get predicted location and scale parameter
@@ -349,7 +367,7 @@ dar_fit <- dar_c_probit(
 )
 
 ### compute log score, squared error, scrps
-q <- seq(0.5, 5.5, 0.05)
+q <- seq(0.5, 5.5, 0.01)
 q[1] <- q[1] + 1e-5
 q[length(q)] <- q[length(q)] - 1e-5
 dar_logs <- logs_dar(dar_fit, X_vl, Y_vl)
@@ -374,25 +392,28 @@ methods <- rep(
     levels = c(
       "IPP (LogS)",
       "IPP (SCRPS)",
+      "IPP (SCRPS, neural nets)",
       "Distributional anchor",
       "DRIG",
-      "Anchor regression"
+      "Anchor regression",
+      "V-REx"
     ),
     labels = c(
       "IPP (LogS)",
       "IPP (SCRPS)",
+      "IPP (SCRPS, neural nets)",
       "Distributional anchor",
       "DRIG",
-      "Anchor regression"
+      "Anchor regression",
+      "V-REx"
     ),
     ordered = TRUE
-  ),
-  each = 3
+  )
 )
 scores <- rep(factor(
-  c("Logs", "SCRPS", "MSE"),
-  levels =  c("Logs", "SCRPS", "MSE"),
-  labels =  c("Logs", "SCRPS", "MSE"),
+  c("LogS", "SCRPS", "MSE"),
+  levels =  c("LogS", "SCRPS", "MSE"),
+  labels =  c("LogS", "SCRPS", "MSE"),
   ordered = TRUE),
   3
 )
@@ -408,7 +429,7 @@ df <- mapply(
       mutate(penalty = parse_number(penalty), method = method, score = score)
   },
   data = err_data,
-  method = methods,
+  method = rep(methods, each = 3),
   score = scores,
   SIMPLIFY = FALSE
 )
@@ -416,7 +437,7 @@ df <- do.call(rbind, df)
 
 ## get results for anchor regression and drig
 an_dr_data <- 
-  read.csv("temporary_files/anchor_drig.csv", header = TRUE, sep = ",")
+  read.csv("data/anchor_drig.csv", header = TRUE, sep = ",")
 an_dr_data <- an_dr_data %>%
   filter(gamma %in% lambda & interv_gene %in% envs) %>%
   mutate(
@@ -434,15 +455,61 @@ an_dr_data <- an_dr_data %>%
   ) %>%
   mutate(score = factor(
     "MSE",
-    levels = c("Logs", "SCRPS", "MSE"),
-    labels = c("Logs", "SCRPS", "MSE"),
+    levels = c("LogS", "SCRPS", "MSE"),
+    labels = c("LogS", "SCRPS", "MSE"),
     ordered = TRUE
     )
   ) %>%
   select(-X) %>%
   rename(penalty = gamma, err = test_mse, intv = interv_gene) %>%
   filter(penalty %in% df$penalty)
-df <- rbind(df, an_dr_data)
+df <- rbind(df, an_dr_data) %>%
+  select(-intv)
+
+## get results for neural networks
+mse_rex <- read.csv("data/results_rex_mse.csv") %>%
+  mutate(
+    method = factor(
+      "V-REx",
+      levels = levels(df$method),
+      labels = levels(df$method)
+    ),
+    score = factor(
+      "MSE",
+      levels = levels(df$score),
+      labels = levels(df$score)
+    )
+  ) %>%
+  rename(err = test_mse, penalty = lambda)
+mse_ipp_nn <- read.csv("data/results_ipp_mse.csv") %>%
+  mutate(
+    method = factor(
+      "IPP (SCRPS, neural nets)",
+      levels = levels(df$method),
+      labels = levels(df$method)
+    ),
+    score = factor(
+      "MSE",
+      levels = levels(df$score),
+      labels = levels(df$score)
+    )
+  ) %>%
+  rename(err = test_mse, penalty = lambda)
+scrps_ipp_nn <- read.csv("data/results_ipp_scrps.csv") %>%
+  mutate(
+    method = factor(
+      "IPP (SCRPS, neural nets)",
+      levels = levels(df$method),
+      labels = levels(df$method)
+    ),
+    score = factor(
+      "SCRPS",
+      levels = levels(df$score),
+      labels = levels(df$score)
+    )
+  ) %>%
+  rename(err = test_scrps, penalty = lambda)
+df <- rbind(df, mse_rex, mse_ipp_nn, scrps_ipp_nn)
 
 ## quantiles of the scores
 qs <- seq(0, 1, 0.1)
@@ -454,10 +521,17 @@ df_qs <- df %>%
   unnest(cols = out)
 
 ## plots
-score_plots <- vector("list", 3)
-for (i in seq_len(3)) {
+score_plots <- vector("list", 4)
+methods_vec <- rep(list(levels(methods)), 4)
+methods_vec[[3]] <- levels(methods)[seq_len(4)]
+methods_vec[[4]] <- tail(levels(methods), n = 3)
+
+for (i in seq_len(4)) {
   df_tmp <- df_qs %>%
-    filter(score == levels(scores)[i])
+    filter(
+      score == levels(scores)[min(i, 3)] & 
+      as.character(method) %in% methods_vec[[i]]
+    )
 
   plt <- ggplot() +
     geom_line(
@@ -478,7 +552,7 @@ for (i in seq_len(3)) {
       )
   }
   mean_errors <- df_tmp %>%
-    filter(score == levels(scores)[i]) %>%
+    filter(score == levels(scores)[min(i, 3)]) %>%
     group_by(method, score, penalty) %>%
     summarise(err = mean(err))
   
@@ -489,19 +563,22 @@ for (i in seq_len(3)) {
       lty = 5
     ) +
     labs(
-      x = if (i == 3) "Penalty" else element_blank(),
-      y = levels(scores)[i],
+      x = if (i == 4) "Penalty" else element_blank(),
+      y = levels(scores)[min(i, 3)],
       color = element_blank(),
       fill = element_blank()
     ) +
-    facet_grid(cols = vars(method))
-  if (i == 3) plt <- plt + coord_cartesian(ylim = c(0.1, 0.9))
+    scale_y_continuous(
+      labels = scales::number_format(accuracy = 0.01)
+    ) +
+    facet_grid(cols = vars(method), scales = "free_x")
+  if (i >= 3) plt <- plt + coord_cartesian(ylim = c(0.1, 0.9))
   score_plots[[i]] <- plt
 }
 
 single_cell_test <- ggarrange(
   plotlist = score_plots,
-  heights = c(1, 1, 1.2),
+  heights = c(1, 1, 1, 1.05),
   ncol = 1
 )
 

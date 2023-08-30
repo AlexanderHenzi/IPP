@@ -10,7 +10,7 @@ from functions.anchor_drig import *
 import pandas as pd
 
 # load data
-df = pd.read_csv("data/dataset_rpe1.csv")
+df = pd.read_csv("data/dataset_rpe1_99.csv")
 interv_label = df["interventions"]
 groups = df.groupby(["interventions"])
 ## centralize data
@@ -37,7 +37,7 @@ data_test_large_shift = [list(data_interv_hidden.values())[i] for i in env_idx]
 data_test_large_shift_gene = [list(data_interv_hidden.keys())[i] for i in env_idx]
 
 # estimate anchor regressoin and drig, compute error
-gammas = np.arange(0, 50, 1)
+gammas = np.arange(0, 100, 1)
 num_gammas = len(gammas)
 num_envs = len(data_test_large_shift)
 results = pd.DataFrame(columns=["method", "gamma", "interv_gene", "test_mse"])

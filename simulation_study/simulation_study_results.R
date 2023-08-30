@@ -57,6 +57,7 @@ selection_data <- do.call(rbind, selection_data)
 
 # --- plots --------------------------------------------------------------------
 score <- "LogS"
+alpha <- 0.05
 load(paste0("data/simulation_results_", str_to_lower(score), ".rda"))
 
 interventions <- data %>%
@@ -190,7 +191,7 @@ parameter_error_data <- data %>%
   )
 
 lambda_data <- selection_data %>%
-  filter(n_obs_env > 50 & alpha_choose == 0.05) %>%
+  filter(n_obs_env > 50 & alpha_choose == alpha) %>%
   select(-gamma, -betahat, -gammahat, -beta) %>%
   group_by(n_obs_env, alpha_choose) %>%
   nest() %>%

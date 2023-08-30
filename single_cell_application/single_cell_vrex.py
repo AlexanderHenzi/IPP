@@ -15,7 +15,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 ## training data
-df = pd.read_csv("data/dataset_rpe1.csv")
+df = pd.read_csv("data/dataset_rpe1_99.csv")
 interv_label = df["interventions"]
 groups = df.groupby(["interventions"])
 df.iloc[:,:-1] = df.iloc[:,:-1] - groups.get_group("non-targeting").iloc[:,:-1].mean()
@@ -35,7 +35,7 @@ data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
 train_data = [data_obs] + list(data_interv_obs.values())[:-1]
 
 ## test data
-data_test_large_shift_gene = list(pd.read_csv("envs_vs_pooled.csv")['genes'])
+data_test_large_shift_gene = list(pd.read_csv("data/single_cell_test_envs.csv")['genes'])
 data_test = []
 for i in range(len(data_interv_hidden)):
     if list(data_interv_hidden.keys())[i] in data_test_large_shift_gene:
