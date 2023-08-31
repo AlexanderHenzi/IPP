@@ -93,7 +93,7 @@ for (i in seq_along(shift)) {
   }
 }
 scores_cond$method <- "Conditional distribution"
-scores_ipp$method <- "IPP"
+scores_ipp$method <- "Do-interventional distribution"
 scores <- rbind(scores_cond, scores_ipp)
 
 # --- plot ---------------------------------------------------------------------
@@ -107,8 +107,8 @@ example <- scores %>%
     ),
     method = factor(
       method,
-      levels = c("IPP", "Conditional distribution"),
-      labels = c("IPP", "Conditional distribution"),
+      levels = c("Do-interventional distribution", "Conditional distribution"),
+      labels = c("Do-interventional distribution", "Conditional distribution"),
       ordered = TRUE
     )
   ) %>%

@@ -523,8 +523,8 @@ df_qs <- df %>%
 ## plots
 score_plots <- vector("list", 4)
 methods_vec <- rep(list(levels(methods)), 4)
-methods_vec[[3]] <- levels(methods)[seq_len(4)]
-methods_vec[[4]] <- tail(levels(methods), n = 3)
+methods_vec[[3]] <- levels(methods)[seq_len(3)]
+methods_vec[[4]] <- tail(levels(methods), n = 4)
 
 for (i in seq_len(4)) {
   df_tmp <- df_qs %>%
