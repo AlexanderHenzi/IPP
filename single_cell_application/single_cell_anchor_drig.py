@@ -5,7 +5,8 @@ Refer to https://github.com/xwshen51/DRIG/blob/main/single_cell.ipynb
 
 # packages
 import pandas as pd
-import os 
+import sys
+sys.path.append(".")
 from functions.anchor_drig import *
 import pandas as pd
 
@@ -31,7 +32,7 @@ data_interv_hidden = dict(zip(interv_hidden, data_interv_hidden))
 train_data = [data_obs] + list(data_interv_obs.values())
 
 # get all test environments
-data_test_large_shift_gene = list(pd.read_csv("single_cell_test_envs.csv")['genes'])
+data_test_large_shift_gene = list(pd.read_csv("data/single_cell_test_envs.csv")['genes'])
 data_test = []
 for i in range(len(data_interv_hidden)):
     if list(data_interv_hidden.keys())[i] in data_test_large_shift_gene:
