@@ -172,7 +172,7 @@ scrps_gaussian <- function(y, l, s) {
 }
 
 ### fit the model with logarithmic score and scrps
-lambda <- c(0:5, seq(10, 100, 5))
+lambda <- c(0:5, seq(10, 70, 5))
 nlambda <- length(lambda)
 
 npar <- 2 * ncol(X_tr[[1]]) + 2
@@ -241,20 +241,21 @@ for (j in seq_len(nlambda)) {
     )
   )$p.value
 }
-
+pval_data <- data.frame(
+  penalty = lambda,
+  pvalue = c(pvals_logs, pvals_scrps),
+  score = rep(c("LogS", "SCRPS"), each = length(pvals_logs))
+)
 plt_pval <- ggplot() +
   geom_hline(yintercept = c(0.05, 0.1), col = colpal[1], lty = 5) +
   geom_line(
-    data = data.frame(
-      penalty = lambda,
-      pvalue = c(pvals_logs, pvals_scrps),
-      score = rep(c("LogS", "SCRPS"), each = length(pvals_logs))
-    ),
+    data = filter(pval_data, penalty <= 70),
     aes(x = penalty, y = pvalue, color = score, group = score)
   ) +
   scale_color_manual(values = colpal[1:2]) +
   labs(x = "Penalty", y = "P-value", color = element_blank()) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  coord_cartesian(xlim = c(0, 70))
 
 ### plot parameters as function of lambda
 ipp_locs <- data.frame(
@@ -297,7 +298,7 @@ ipp_scrps_errs <- imap(
   .f = ~data.frame(env = .y, logs = c(t(.x)), lambda = lambda, score = "SCRPS")
 )
 ipp_errs <- do.call(rbind, c(ipp_logs_errs, ipp_scrps_errs)) %>%
-  filter(lambda %in% c(0, 5, 10, 40, 80))
+  filter(lambda %in% c(0, 5, 10, 35, 70))
 
 stability <- ggplot() +
   geom_errorbar(
@@ -354,14 +355,13 @@ logs_scrps <- scrps_gaussian(Y_vl, pred_logs$location, pred_logs$scale)
 logs_sqerr <- (pred_logs$location - Y_vl)^2
 scrps_logs <- logs_gaussian(Y_vl, pred_scrps$location, pred_scrps$scale)
 scrps_scrps <- scrps_gaussian(Y_vl, pred_scrps$location, pred_scrps$scale)
-scrps_sqerr <- (pred_logs$location - Y_vl)^2
+scrps_sqerr <- (pred_scrps$location - Y_vl)^2
 
 ## distributional anchor regression
 xi <- lambda
-o_env <- which(envs_interv == "non-targeting")
 dar_fit <- dar_c_probit(
-  X_tr[-o_env],
-  Y_tr[-o_env],
+  X_tr[!(envs_interv %in% c(rvar, "non-targeting"))],
+  Y_tr[!(envs_interv %in% c(rvar, "non-targeting"))],
   xi = xi,
   support = c(0.5, 5.5)
 )
@@ -392,7 +392,7 @@ methods <- rep(
     levels = c(
       "IPP (LogS)",
       "IPP (SCRPS)",
-      "IPP (SCRPS, neural nets)",
+      "IPP (SCRPS, NN)",
       "Distributional anchor",
       "DRIG",
       "Anchor regression",
@@ -401,7 +401,7 @@ methods <- rep(
     labels = c(
       "IPP (LogS)",
       "IPP (SCRPS)",
-      "IPP (SCRPS, neural nets)",
+      "IPP (SCRPS, NN)",
       "Distributional anchor",
       "DRIG",
       "Anchor regression",
@@ -484,7 +484,7 @@ mse_rex <- read.csv("data/results_rex_mse.csv") %>%
 mse_ipp_nn <- read.csv("data/results_ipp_mse.csv") %>%
   mutate(
     method = factor(
-      "IPP (SCRPS, neural nets)",
+      "IPP (SCRPS, NN)",
       levels = levels(df$method),
       labels = levels(df$method)
     ),
@@ -498,7 +498,7 @@ mse_ipp_nn <- read.csv("data/results_ipp_mse.csv") %>%
 scrps_ipp_nn <- read.csv("data/results_ipp_scrps.csv") %>%
   mutate(
     method = factor(
-      "IPP (SCRPS, neural nets)",
+      "IPP (SCRPS, NN)",
       levels = levels(df$method),
       labels = levels(df$method)
     ),
@@ -518,7 +518,8 @@ df_qs <- df %>%
   summarise(
     out = list(tibble(qs, err = quantile(err, probs = qs, type = 1)))
   ) %>%
-  unnest(cols = out)
+  unnest(cols = out) %>%
+  filter(penalty <= 70)
 
 ## plots
 score_plots <- vector("list", 4)
@@ -526,13 +527,12 @@ methods_vec <- rep(list(levels(methods)), 4)
 methods_vec[[3]] <- levels(methods)[seq_len(3)]
 methods_vec[[4]] <- tail(levels(methods), n = 4)
 
-for (i in seq_len(4)) {
+for (i in seq_len(3)) {
   df_tmp <- df_qs %>%
     filter(
       score == levels(scores)[min(i, 3)] & 
       as.character(method) %in% methods_vec[[i]]
     )
-
   plt <- ggplot() +
     geom_line(
       data = filter(df_tmp, abs(qs - 0.5) < 1e-5),
@@ -563,7 +563,7 @@ for (i in seq_len(4)) {
       lty = 5
     ) +
     labs(
-      x = if (i == 4) "Penalty" else element_blank(),
+      x = if (i == 3) "Penalty" else element_blank(),
       y = levels(scores)[min(i, 3)],
       color = element_blank(),
       fill = element_blank()
@@ -582,6 +582,6 @@ single_cell_test <- ggarrange(
   ncol = 1
 )
 
-pdf("temporary_files/single_cell_test.pdf", width = 8, height = 6)
+pdf("temporary_files/single_cell_without_rvar_all_methods.pdf", width = 8, height = 6)
 print(single_cell_test)
 dev.off()
