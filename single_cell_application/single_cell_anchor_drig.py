@@ -4,7 +4,6 @@ Refer to https://github.com/xwshen51/DRIG/blob/main/single_cell.ipynb
 
 # packages
 import pandas as pd
-import os 
 import sys
 sys.path.append(".")
 from functions.anchor_drig import *
