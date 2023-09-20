@@ -2,7 +2,7 @@
 This repository contains implementations and replication material for the 
 preprint
 
-arXiv link to be added here
+Alexander Henzi, Xinwei Shen, Michael Law, and Peter Bühlmann. "Invariant Probabilistic Prediction" arXiv preprint [arXiv:2309.10083](https://arxiv.org/abs/arXiv:2309.10083) (2023).
 
 The folder ``illustrative_example`` contains code to
 replicate the example from Section 3.3 of the preprint.
