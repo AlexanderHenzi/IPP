@@ -3,11 +3,11 @@
 This repository contains implementations and replication material for the 
 preprint
 
-Henzi, A., Shen, X., Law, M., & Bühlmann, P. (2023). Invariant probabilistic prediction. arXiv preprint [arXiv:2309.10083](https://arxiv.org/abs/2309.10083).
+Alexander Henzi, Xinwei Shen, Michael Law, and Peter Bühlmann. "Invariant Probabilistic Prediction" arXiv preprint [arXiv:2309.10083](https://arxiv.org/abs/arXiv:2309.10083) (2023).
 
 ## General implementation of our methods
 
-The folder `functions` contains implementations for our methods in R and Python: `ipp.R` is the R implementation for the parametric IPP, and `ipp_nn.py` is the python implmenetation of the neural network variant. For the package requirements in Python, see the `requirements.txt` file in the main directory.
+The folder `functions` contains implementations for our methods in R and Python: `ipp.R` is the R implementation for the parametric IPP, and `ipp_nn.py` is the python implementation of the neural network variant. For the package requirements in Python, see the `requirements.txt` file in the main directory.
 
 Other methods used in the paper are in `distributional_anchor_regression.R` (for distributional anchor regression, see https://github.com/LucasKook/distributional-anchor-regression), `anchor_drig.py` (for anchor regression and DRIG, see https://github.com/xwshen51/DRIG/blob/main/estimate.py), and `cputils.py` (for conformal prediction, see https://github.com/zhimeir/finegrained-conformal-paper). The conformal prediciton methdos rely on the `qosa` package in Python (https://gitlab.com/qosa_index/qosa), which is included in the `functions` directory for easy reference.
 
