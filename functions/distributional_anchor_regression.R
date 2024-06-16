@@ -174,7 +174,49 @@ sqerr_dar <- function(fit, X_vl, Y_vl, q) {
   out
 }
 
-#' Scrps error for distributional anchor regression
+#' Prediction intervals for distributional anchor regression
+#' 
+#' @param fit output of \code{dar_c_probit}.
+#' @param X_vl covariates for validation data.
+#' @param Y_vl response variable for validation data.
+#' @param conf.level desired coverage
+#' 
+#' @return
+#' A matrix of size \code{nrow(X_vl)} times the number of penalization 
+#' parameters in \code{fit}, containing the squared error for the mean
+#' predictions.
+predint_dar <- function(fit, X_vl, Y_vl, conf.level = 0.9) {
+  m <- length(fit$models)
+  out <- vector("list", 2)
+  out[[1]] <- out[[2]] <- matrix(nrow = length(Y_vl), ncol = length(fit$models))
+  X_vl <- as.data.frame(X_vl)
+  colnames(X_vl) <- paste0("X", seq_len(ncol(fit$models[[1]]$data[-1])))
+  alpha <- (1 - conf.level) / 2
+  pb <- txtProgressBar(max = m)
+  for (j in seq_len(m)) {
+    setTxtProgressBar(pb, j)
+    lwr <- predict(
+      fit$models[[j]],
+      type = "quantile",
+      prob = alpha,
+      newdata = X_vl
+    )
+    if (is.data.frame(lwr)) lwr <- lwr$approxy
+    upr <- predict(
+      fit$models[[j]],
+      type = "quantile",
+      prob = 1 - alpha,
+      newdata = X_vl
+    )
+    if (is.data.frame(upr)) upr <- upr$approxy
+    out[[1]][, j] <- (Y_vl > lwr & Y_vl < upr)
+    out[[2]][, j] <- upr - lwr
+  }
+  close(pb)
+  out
+}
+
+#' Scrps for distributional anchor regression
 #' 
 #' @param fit output of \code{dar_c_probit}.
 #' @param X_vl covariates for validation data.
@@ -208,6 +250,44 @@ scrps_dar <- function(fit, X_vl, Y_vl, q) {
       c((ps[, -1] * (1 - ps[, -1]) + ps[, -nq] * (1 - ps[, -nq])) %*% dq)
     mae <- rowSums(abs(outer(Y_vl, q, FUN = "-")) * (ps - cbind(0, ps[, -nq])))
     out[, j] <- mae / mean_diff + log(mean_diff) / 2
+  }
+  out
+}
+
+#' crps for distributional anchor regression
+#' 
+#' @param fit output of \code{dar_c_probit}.
+#' @param X_vl covariates for validation data.
+#' @param Y_vl response variable for validation data.
+#' @param q grid over the support of the outcome variable. Should be contained
+#'     in the support of \code{fit}. Is used to approximate the conditional
+#'     CDFs for the computation of the SCRPS.
+#' 
+#' @return
+#' A matrix of size \code{nrow(X_vl)} times the number of penalization 
+#' parameters in \code{fit}, containing the SCRPS.
+crps_dar <- function(fit, X_vl, Y_vl, q) {
+  m <- length(fit$models)
+  out <- matrix(nrow = length(Y_vl), ncol = length(fit$models))
+  X_vl <- as.data.frame(X_vl)
+  colnames(X_vl) <- paste0("X", seq_len(ncol(fit$models[[1]]$data[-1])))
+  nq <- length(q)
+  dq <- diff(q)
+  for (j in seq_len(m)) {
+    ps <- predict(
+      fit$models[[j]],
+      type = "distribution",
+      q = q,
+      newdata = X_vl
+    )
+    ps <- t(ps) / ps[nq, ]
+    if (!is.matrix(ps) | nrow(ps) != length(Y_vl) | ncol(ps) != nq) {
+      stop("predict tram error")
+    }
+    mean_diff <- 
+      c((ps[, -1] * (1 - ps[, -1]) + ps[, -nq] * (1 - ps[, -nq])) %*% dq)
+    mae <- rowSums(abs(outer(Y_vl, q, FUN = "-")) * (ps - cbind(0, ps[, -nq])))
+    out[, j] <- mae - mean_diff / 2
   }
   out
 }

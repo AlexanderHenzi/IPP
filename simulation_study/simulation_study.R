@@ -5,7 +5,7 @@ library(GA)
 library(MASS)
 
 # functions
-source("ipp.R")
+source("functions/ipp.R")
 
 # parameters
 id <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))

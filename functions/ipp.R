@@ -105,7 +105,7 @@ ipp <- function(X, Y, score, lambda, ...) {
     for (j in 2:m) {
       opt <- ga(
         fitness = function(par) {
-          -ipp_target(X = X, Y = Y, score = score, lambda = lambda[j], par = par)
+          -ipp_target(X = X, Y = Y, score = score, lambda = lambda[j], par)
         },
         ...
       )

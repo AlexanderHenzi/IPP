@@ -297,23 +297,17 @@ overflow-y: auto;
 border: 1px solid #ddd;
 border-radius: 4px;
 }
-.tabset-dropdown > .nav-tabs > li.active:before {
-content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+content: "\e259";
 font-family: 'Glyphicons Halflings';
 display: inline-block;
 padding: 10px;
 border-right: 1px solid #ddd;
 }
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-content: "";
-border: none;
-}
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-content: "";
+content: "\e258";
 font-family: 'Glyphicons Halflings';
-display: inline-block;
-padding: 10px;
-border-right: 1px solid #ddd;
+border: none;
 }
 .tabset-dropdown > .nav-tabs > li.active {
 display: block;
@@ -362,18 +356,74 @@ display: none;
 <h1>Invariant Probabilistic Prediction</h1>
 <p>This repository contains implementations and replication material for
 the preprint</p>
-<p>arXiv link to be added here</p>
-<p>The folder <code>illustrative_example</code> contains code to
-replicate the example from Section 2.4 of the preprint. R and Python
-implementations of IPP and other methods applied in the case study are
-in <code>functions</code>. Code for the simulation study in Section 4.1
-of the preprint is in <code>simulation_study</code>. The file
-<code>simulation_study.R</code> generates a single run of the
-simulations and can be submitted to a HPC cluster with SLURM. The
-collected simulation results are available in
-<code>data&#39;&#39;. Code for the single cell data application in Section 4.2 is in</code>single_cell_application’‘.
-The selected test environments, as well as some intermediate results,
-are stored in ``data’’ for convenience.</p>
+<p>Henzi, A., Shen, X., Law, M., &amp; Bühlmann, P. (2023). Invariant
+probabilistic prediction. arXiv preprint <a href="https://arxiv.org/abs/2309.10083">arXiv:2309.10083</a>.</p>
+<div id="general-implementation-of-our-methods" class="section level2">
+<h2>General implementation of our methods</h2>
+<p>The folder <code>functions</code> contains implementations for our
+methods in R and Python: <code>ipp.R</code> is the R implementation for
+the parametric IPP, and <code>ipp_nn.py</code> is the python
+implmenetation of the neural network variant. For the package
+requirements in Python, see the <code>requirements.txt</code> file in
+the main directory.</p>
+<p>Other methods used in the paper are in
+<code>distributional_anchor_regression.R</code> (for distributional
+anchor regression, see <a href="https://github.com/LucasKook/distributional-anchor-regression" class="uri">https://github.com/LucasKook/distributional-anchor-regression</a>),
+<code>anchor_drig.py</code> (for anchor regression and DRIG, see <a href="https://github.com/xwshen51/DRIG/blob/main/estimate.py" class="uri">https://github.com/xwshen51/DRIG/blob/main/estimate.py</a>),
+and <code>cputils.py</code> (for conformal prediction, see <a href="https://github.com/zhimeir/finegrained-conformal-paper" class="uri">https://github.com/zhimeir/finegrained-conformal-paper</a>).
+The conformal prediciton methdos rely on the <code>qosa</code> package
+in Python (<a href="https://gitlab.com/qosa_index/qosa" class="uri">https://gitlab.com/qosa_index/qosa</a>), which is included
+in the <code>functions</code> directory for easy reference.</p>
+</div>
+<div id="reproducing-the-toy-example" class="section level2">
+<h2>Reproducing the toy example</h2>
+<p>Code for the illustrative example from Section 2.4 of the article is
+in the directory <code>illustration</code>.</p>
+</div>
+<div id="reproducing-the-simulations" class="section level2">
+<h2>Reproducing the simulations</h2>
+<p>The folder <code>simulation_study</code> contains the code to
+reproduce the simulations in the article and supplement/appendix:
+<code>simulation_study.R</code> and
+<code>simulation_study_results.R</code> are for the simulation study in
+the article.</p>
+<p>For the simulations in the article, <code>simulation_study.R</code>
+computes a single run of the simulations for a certain parameter
+combination, which has to be parallelized on a HPC cluster to reproduce
+the complete simulations (with <code>array_task_simulation.sh</code>);
+<code>simulation_study_results.R</code> collects the results and
+generates the figures. The collected results can be found in
+<code>data/simulation_results_logs/scrps.rda</code>, so that the figures
+are reproducible without running all simulations.</p>
+<p>For the simulations in the supplement/appendix,
+<code>simulation_study_2_data_preparation.R</code> generates the
+semi-real single cell data for all simulation runs, and
+<code>simulation_study_2_computations.R</code> computes the results on a
+single run (to be parallelized with
+<code>array_task_simulation_2.R</code>). The results are collected and
+processed with <code>simulation_study_2_results.R</code>. The simulation
+results are contained in <code>data/simulation_2_results</code>.</p>
+</div>
+<div id="reproducing-the-single-cell-application" class="section level2">
+<h2>Reproducing the single cell application</h2>
+<p>Scripts for the single cell data application are in
+<code>single_cell_application</code>. The script generating all the
+figures in the article is <code>single_cell_application.R</code>. Since
+the application involves many different methods, some of which are
+computationally expensive and some of which are implemented in R and
+others in Python, the computations are done in different scripts. The
+parametric variants of IPP and distributional anchor regression are done
+in <code>single_cell_application.R</code>. The computations are slow and
+intermediate results are stored in <code>data</code> and automatically
+loaded when the <code>run_computations</code> parameter is set to
+<code>FALSE</code>. Anchor regression and DRIG are computed with
+<code>single_cell_anchor_drig.py</code>, the neural network variants of
+IPP with <code>single_cell_ipp_nn.py</code>, and V-REx with
+<code>single_cell_vrex.py</code>. The conformal prediction methods have
+long computation time, and <code>single_cell_cp.py</code> applies them
+for a single environment and penalty parameter (parallelized on a
+cluster with <code>array_task_single_cell_cp.py</code>).</p>
+</div>
 </div>
 
 

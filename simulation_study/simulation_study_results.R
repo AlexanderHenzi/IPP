@@ -5,7 +5,7 @@ library(tidyverse)
 library(scales)
 
 # ggplot2 settings, colors
-theme_set(theme_bw(base_size = 12))
+theme_set(theme_bw(base_size = 11))
 colpal <- c(
   "#999999",
   "#E69F00",
@@ -18,109 +18,55 @@ colpal <- c(
 )
 
 # --- get data -----------------------------------------------------------------
-fl <- paste0("temporary_files/simulation_results_logs/simulations_", seq_len(7000), ".rda")
 
-data <- selection_data <- vector("list", length(fl))
-pb <- txtProgressBar(max = length(fl))
-for (i in seq_along(fl)) {
-  setTxtProgressBar(pb, i)
-  load(fl[i])
-  data[[i]] <- tibble(
-    n_obs_env = n_obs_env,
-    lambda = seq(0, 15, 0.5),
-    sim = sim,
-    high_variance = high_variance_error,
-    low_variance = low_variance_error,
-    mean_shift = mean_shift_error,
-    observational = prediction_error,
-    correlation = corr_error,
-    mean_err = mean_err,
-    var_err = var_err,
-    beta = list(beta),
-    gamma = list(gamma),
-    betahat = asplit(location, 2),
-    gammahat = asplit(scale, 2)
-  )
-  selection_data[[i]] <- tibble(
-    n_obs_env = n_obs_env,
-    alpha_choose = alpha_choose,
-    chosen_lambda = chosen_lambda,
-    beta = list(beta),
-    gamma = list(gamma),
-    betahat = asplit(location[, match(chosen_lambda, seq(0, 15, 0.5))], 2),
-    gammahat = asplit(scale[, match(chosen_lambda, seq(0, 15, 0.5))], 2)
-  )
+gather_data <- FALSE
+if (gather_data) {
+  fl <- paste0("temporary_files/simulation_results_logs/simulations_", seq_len(7000), ".rda")
+  
+  data <- selection_data <- vector("list", length(fl))
+  pb <- txtProgressBar(max = length(fl))
+  for (i in seq_along(fl)) {
+    setTxtProgressBar(pb, i)
+    load(fl[i])
+    data[[i]] <- tibble(
+      n_obs_env = n_obs_env,
+      lambda = seq(0, 15, 0.5),
+      sim = sim,
+      high_variance = high_variance_error,
+      low_variance = low_variance_error,
+      mean_shift = mean_shift_error,
+      observational = prediction_error,
+      correlation = corr_error,
+      mean_err = mean_err,
+      var_err = var_err,
+      beta = list(beta),
+      gamma = list(gamma),
+      betahat = asplit(location, 2),
+      gammahat = asplit(scale, 2)
+    )
+    selection_data[[i]] <- tibble(
+      n_obs_env = n_obs_env,
+      alpha_choose = alpha_choose,
+      chosen_lambda = chosen_lambda,
+      beta = list(beta),
+      gamma = list(gamma),
+      betahat = asplit(location[, match(chosen_lambda, seq(0, 15, 0.5))], 2),
+      gammahat = asplit(scale[, match(chosen_lambda, seq(0, 15, 0.5))], 2)
+    )
+  }
+  close(pb)
+  data <- do.call(rbind, data)
+  selection_data <- do.call(rbind, selection_data)
 }
-close(pb)
-data <- do.call(rbind, data)
-selection_data <- do.call(rbind, selection_data)
 
 # --- plots --------------------------------------------------------------------
-score <- "LogS"
+
+# set parameters
+score <- "SCRPS"
 alpha <- 0.05
+
+# load data
 load(paste0("data/simulation_results_", str_to_lower(score), ".rda"))
-
-interventions <- data %>%
-  gather(
-    key = "intervention",
-    value = "err",
-    high_variance,
-    low_variance,
-    mean_shift,
-    correlation,
-    observational
-  ) %>%
-  mutate(
-    intervention = factor(
-      intervention,
-      levels = c(
-        "observational",
-        "low_variance",
-        "high_variance",
-        "correlation",
-        "mean_shift"
-      ),
-      labels = c(
-        "pooled training",
-        "low variance",
-        "high variance",
-        "correlation",
-        "mean shift"
-      ),
-      ordered = TRUE
-    )
-  ) %>%
-  filter(n_obs_env > 50) %>%
-  group_by(n_obs_env, intervention, lambda) %>%
-  summarise(err = mean(err)) %>%
-  ggplot() +
-  geom_line(
-    aes(x = lambda, y = err, color = intervention, group = intervention)
-  ) +
-  scale_color_manual(values = colpal[seq_len(6)]) +
-  facet_grid(cols = vars(n_obs_env)) +
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(nrow = 1)) +
-  labs(
-    x = "Penalty",
-    y = paste0("Test environment ", score),
-    color = element_blank()
-  )
-
-if (score == "LogS") interventions <- 
-  interventions + coord_cartesian(ylim = c(1.25, 3.5), xlim = c(0, 15))
-
-pdf(
-  paste0(
-    "temporary_files/interventions_",
-    str_to_lower(score),
-    ".pdf"
-  ),
-  width = 8,
-  height = 3
-)
-print(interventions)
-dev.off()
 
 parameter_error_data <- data %>%
   group_by(n_obs_env, lambda) %>%
@@ -236,7 +182,8 @@ parameter_error <- ggplot() +
     scales = "free_y",
     labeller = labeller(parameter = label_parsed)
   ) +
-  theme(legend.position = "bottom") +
+  # theme(legend.position = "bottom") +
+  theme(legend.position = "none") + 
   labs(
     x = "Penalty",
     y = "Error",
@@ -246,12 +193,93 @@ parameter_error <- ggplot() +
 
 pdf(
   paste0(
-    "temporary_files/parameter_error_",
-    str_to_lower(score),
+    "temporary_files/parameterError",
+    score,
+    alpha,
     ".pdf"
   ),
   width = 8,
-  height = 4
+  height = 3
 )
 print(parameter_error)
+dev.off()
+
+# error under interventions
+if (score == "LogS") {
+  b1 <- 1.25
+  b2 <- 20
+} else {
+  b1 <- 0.9
+  b2 <- 6
+}
+
+interventions <- data %>%
+  gather(
+    key = "intervention",
+    value = "err",
+    high_variance,
+    low_variance,
+    mean_shift,
+    correlation,
+    observational
+  ) %>%
+  mutate(
+    intervention = factor(
+      intervention,
+      levels = c(
+        "observational",
+        "low_variance",
+        "high_variance",
+        "correlation",
+        "mean_shift"
+      ),
+      labels = c(
+        "pooled training",
+        "low variance",
+        "high variance",
+        "correlation",
+        "mean shift"
+      ),
+      ordered = TRUE
+    )
+  ) %>%
+  filter(n_obs_env > 50) %>%
+  group_by(n_obs_env, intervention, lambda) %>%
+  summarise(err = mean(err)) %>%
+  ggplot() +
+  geom_linerange(
+    data = lambda_data[lambda_data$parameter == "beta",],
+    aes(x = chosen_lambda, ymin = b1, ymax = n * b2 + b1),
+    alpha = 0.3,
+    color = colpal[7],
+    lwd = 1
+  ) +
+  geom_line(
+    aes(x = lambda, y = err, color = intervention, group = intervention)
+  ) +
+  scale_color_manual(values = colpal[seq_len(6)]) +
+  facet_grid(cols = vars(n_obs_env)) +
+  # theme(legend.position = "bottom") +
+  theme(legend.position = "none") +
+  guides(color = guide_legend(nrow = 1)) +
+  labs(
+    x = "Penalty",
+    y = paste0("Test environment ", score),
+    color = element_blank()
+  )
+
+if (score == "LogS") interventions <- 
+  interventions + coord_cartesian(ylim = c(1.25, 3.5), xlim = c(0, 15))
+
+pdf(
+  paste0(
+    "temporary_files/interventions",
+    score,
+    alpha,
+    ".pdf"
+  ),
+  width = 8,
+  height = 2
+)
+print(interventions)
 dev.off()

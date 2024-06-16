@@ -1,0 +1,5 @@
+penalty;method;value;score;sim;env;training
+0.035;rcp;1.0;in_pi;20230580;ENSG00000198258;pooled
+0.035;dwrcp;0.8500000000000001;in_pi;20230580;ENSG00000198258;pooled
+0.035;rcp;3.58769203598066;pi_width;20230580;ENSG00000198258;pooled
+0.035;dwrcp;1.5217502694278089;pi_width;20230580;ENSG00000198258;pooled

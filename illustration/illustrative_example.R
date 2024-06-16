@@ -103,7 +103,7 @@ for (i in seq_along(shift)) {
 }
 scores_cond$method <- scores_cond_do$method <- "Conditional distribution"
 scores_ipp$method <- scores_ipp_do$method <- "Do-interventional distribution"
-scores_cond$interv <- scores_ipp$interv <- "X^t == Gamma[t]~epsilon[X]"
+scores_cond$interv <- scores_ipp$interv <- "X^t == Gamma^t~epsilon[X]"
 scores_cond_do$interv <- scores_ipp_do$interv <- "list(X[1]^t %==% t, X[2]^t %==% -1.5+t^2)"
 scores <- rbind(scores_cond, scores_ipp, scores_cond_do, scores_ipp_do)
 
@@ -125,11 +125,11 @@ example <- scores %>%
     interv = factor(
       interv,
       levels = c(
-        "X^t == Gamma[t]~epsilon[X]",
+        "X^t == Gamma^t~epsilon[X]",
         "list(X[1]^t %==% t, X[2]^t %==% -1.5+t^2)"
       ),
       labels = c(
-        "X^t == Gamma[t]~epsilon[X]",
+        "X^t == Gamma^t~epsilon[X]",
         "list(X[1]^t %==% t, X[2]^t %==% -1.5+t^2)"
       ),
       ordered = TRUE
@@ -156,7 +156,8 @@ example <- scores %>%
   )) +
   scale_linetype_manual(values = c(1, 5), labels = parse_format()) +
   facet_wrap(.~score, nrow = 2, scales = "free") +
-  theme(legend.position = "bottom") +
+  # theme(legend.position = "bottom") +
+  theme(legend.position = "none") +
   scale_color_manual(values = colpal[1:2]) +
   labs(
     x = expression(Intervention~strength~italic(t)),
@@ -165,7 +166,7 @@ example <- scores %>%
     linetype = element_blank()
   )
 
-pdf("temporary_files/illustrative_example.pdf", width = 8, height = 4)
+pdf("temporary_files/illustrativeExample.pdf", width = 8, height = 3.5)
 print(example)
 dev.off()
 
